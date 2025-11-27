@@ -16,6 +16,13 @@ Adafruit_GC9A01A tft(TFT_CS, TFT_DC);
 
 float averageRoll = 0;
 float averagePitch = 0;
+
+float minRoll = 100;
+float maxRoll = -100;
+
+float minPitch = 100;
+float maxPitch = -100;
+
  
 void setup() {
 
@@ -34,9 +41,6 @@ void setup() {
   tft.begin();
 
   sensors_event_t a, g, temp;
-
-  
-  float largestChange;
   
   for(int i = 0; i < 25; i++){
     mpu.getEvent(&a, &g, &temp);
@@ -45,6 +49,22 @@ void setup() {
 
     averageRoll += roll;
     averagePitch += pitch;
+
+    if(pitch < minPitch){
+      minPitch = pitch;
+    }
+
+    if(pitch > maxPitch){
+      maxPitch = pitch;
+    }
+
+    if(roll < minRoll){
+      minRoll = roll;
+    }
+
+    if(roll > maxRoll){
+      maxRoll = roll;
+    }
   }
 
   averageRoll /= 25;
@@ -52,6 +72,8 @@ void setup() {
 
   Serial.println(averageRoll);
   Serial.println(averagePitch);
+
+  tft.fillScreen(GC9A01A_BLACK);
  /*
   Serial.println(F("Benchmark                Time (microseconds)"));
   delay(10);
@@ -112,7 +134,6 @@ int ballX = 120;
 // can do distance from the center to stop from going outta bounds
  
 void loop(void) {
-  delay(1000);
   sensors_event_t a, g, temp;
   mpu.getEvent(&a, &g, &temp);
 
@@ -128,21 +149,55 @@ void loop(void) {
   Serial.println(" deg");
   
 
-  delay(100);
+  delay(50);
 
   
   // dont want it in a loop as it will keep reseting
-  tft.fillScreen(GC9A01A_BLACK);
-  tft.fillCircle(ballX, ballY, 20, GC9A01A_RED);
+  // tft.fillScreen(GC9A01A_BLACK);
+  // tft.fillCircle(ballX, ballY, 20, GC9A01A_RED);
 
   double distance = round(sqrt(pow(ballX - 120, 2) + pow(ballY - 120,2)));
-  Serial.println(distance);
-  Serial.print(" distance");
+  Serial.println("ballX: ");
+  Serial.print(ballX);
+  Serial.println("ballY: ");
+  Serial.print(ballY);
 
-  if(distance < 120 - 10){
-    ballX += round(1*roll);
-    ballY -= round(1*pitch);
+  tft.fillCircle(ballX, ballY, 20, GC9A01A_BLACK);
+
+  // attempt at solving drifting
+  // if(roll > maxRoll*2 || roll < minRoll*0.5){
+  //   ballX += round(1 * roll);
+  // }
+
+  // if(pitch > maxPitch*2 || pitch < minPitch*0.5){
+  //   ballY -= round(1 * pitch);
+  // }
+
+
+  // update position
+  ballX += round(1 * roll);
+  ballY -= round(1 * pitch);
+  
+  // ---- CLAMP INSIDE ROUND SCREEN ----
+  int centerX = 120;
+  int centerY = 120;
+  int ballRadius = 20;
+  int maxRadius = 120 - ballRadius;
+
+  float dx = ballX - centerX;
+  float dy = ballY - centerY;
+  float dist = sqrt(dx*dx + dy*dy);
+
+  if (dist > maxRadius) {
+      float scale = maxRadius / dist;
+      ballX = centerX + dx * scale;
+      ballY = centerY + dy * scale;
   }
+  // -----------------------------------
+
+  // draw new ball
+  tft.fillCircle(ballX, ballY, ballRadius, GC9A01A_RED);
+
   // position x positive is to the left
   // position y positive down 
 
