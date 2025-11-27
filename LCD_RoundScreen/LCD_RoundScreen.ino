@@ -1,19 +1,58 @@
 #include "SPI.h"
 #include "Adafruit_GFX.h"
 #include "Adafruit_GC9A01A.h"
+
+#include <Wire.h>
+#include <Adafruit_MPU6050.h>
+#include <Adafruit_Sensor.h>
+
+Adafruit_MPU6050 mpu;
  
-#define TFT_DC 8
+#define TFT_DC 2
 #define TFT_CS 7
  
 // Hardware SPI on Feather or other boards
 Adafruit_GC9A01A tft(TFT_CS, TFT_DC);
+
+float averageRoll = 0;
+float averagePitch = 0;
  
 void setup() {
+
   Serial.begin(9600);
+
+  Wire.begin(1, 3); // Specify SDA (0) and SCL (5) for ESP32-C3
+
+  if (!mpu.begin()) {
+    Serial.println("MPU6050 connection failed!");
+    while (1);
+  }
+
+  
   Serial.println("GC9A01A Test!");
  
   tft.begin();
- 
+
+  sensors_event_t a, g, temp;
+
+  
+  float largestChange;
+  
+  for(int i = 0; i < 25; i++){
+    mpu.getEvent(&a, &g, &temp);
+    float roll = atan2(a.acceleration.y, a.acceleration.z) * 180 / PI;
+    float pitch = atan2(-a.acceleration.x, sqrt(a.acceleration.y * a.acceleration.y + a.acceleration.z * a.acceleration.z)) * 180 / PI;
+
+    averageRoll += roll;
+    averagePitch += pitch;
+  }
+
+  averageRoll /= 25;
+  averagePitch /= 25;
+
+  Serial.println(averageRoll);
+  Serial.println(averagePitch);
+ /*
   Serial.println(F("Benchmark                Time (microseconds)"));
   delay(10);
   Serial.print(F("Screen fill              "));
@@ -64,15 +103,57 @@ void setup() {
   delay(500);
  
   Serial.println(F("Done!"));
+  */
 }
+
+int ballY = 120;
+int ballX = 120;
+
+// can do distance from the center to stop from going outta bounds
  
 void loop(void) {
-  for(uint8_t rotation=0; rotation<4; rotation++) {
-    tft.setRotation(rotation);
-    testText();
-    delay(1000);
+  delay(1000);
+  sensors_event_t a, g, temp;
+  mpu.getEvent(&a, &g, &temp);
+
+  // --- 1. Basic Accelerometer-based Roll/Pitch ---
+  // (In a real application, you would use a Sensor Fusion algorithm here)
+  float roll = atan2(a.acceleration.y, a.acceleration.z) * 180 / PI;
+  float pitch = atan2(-a.acceleration.x, sqrt(a.acceleration.y * a.acceleration.y + a.acceleration.z * a.acceleration.z)) * 180 / PI;
+
+  Serial.print("Roll: ");
+  Serial.print(roll);
+  Serial.print(" deg | Pitch: ");
+  Serial.print(pitch);
+  Serial.println(" deg");
+  
+
+  delay(100);
+
+  
+  // dont want it in a loop as it will keep reseting
+  tft.fillScreen(GC9A01A_BLACK);
+  tft.fillCircle(ballX, ballY, 20, GC9A01A_RED);
+
+  double distance = round(sqrt(pow(ballX - 120, 2) + pow(ballY - 120,2)));
+  Serial.println(distance);
+  Serial.print(" distance");
+
+  if(distance < 120 - 10){
+    ballX += round(1*roll);
+    ballY -= round(1*pitch);
   }
+  // position x positive is to the left
+  // position y positive down 
+
+  // roll positive as its goes down
+  // roll negative as it goes up
+  // pitch positive as it goes right
+  // pitch negative as it goes left
+  
 }
+
+
  
 unsigned long testFillScreen() {
   unsigned long start = micros();
