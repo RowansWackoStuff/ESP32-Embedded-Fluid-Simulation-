@@ -89,7 +89,7 @@ void loop(void) {
 
 }
 
-const int sandAmount = 200;
+const int sandAmount = 900;
 int sandX[sandAmount];
 int sandY[sandAmount];
 
@@ -102,7 +102,7 @@ void initialiseSand(){
 
     tft.drawPixel(sandX[i], sandY[i], GC9A01A_RED);
 
-    // sandGrid[sandX[i]][sandY[i]] = 1;
+    sandGrid[sandX[i]][sandY[i]] = 1;
   }
 
 
@@ -119,6 +119,7 @@ void sand(){
   for(int i = 0; i < sandAmount; i++){
 
     tft.drawPixel(sandX[i], sandY[i], GC9A01A_BLACK);
+    sandGrid[sandX[i]][sandY[i]] = 0;
 
     int newX = sandX[i] + round(roll * 0.1);
     int newY = sandY[i] - round(pitch * 0.1);
@@ -145,17 +146,22 @@ void sand(){
 
     // only check if the spots around it are full?
 
-    for(int j = 0; j < sandAmount; j++){
-      if(newX == sandX[j] && newY == sandY[j]){
-        collide = true;
-        break;
-      }
+    // for(int j = 0; j < sandAmount; j++){
+    //   if(newX == sandX[j] && newY == sandY[j]){
+    //     collide = true;
+    //     break;
+    //   }
+    // }
+
+    if(sandGrid[newX][newY] == 1){
+      collide = true;
     }
 
     if(collide == false){
       sandX[i] = newX;
       sandY[i] = newY;
     }
+    sandGrid[sandX[i]][sandY[i]] = 1;
 
     tft.drawPixel(sandX[i], sandY[i], GC9A01A_RED);
 
