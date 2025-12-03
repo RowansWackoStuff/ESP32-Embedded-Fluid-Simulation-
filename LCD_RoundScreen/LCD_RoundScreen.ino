@@ -113,45 +113,91 @@ void sand(){
   Serial.print(" pitch: ");
   Serial.print(pitch);
 
+  int highest = 0;
+  if(abs(round(roll)) > abs(round(pitch))){
+    highest = abs(round(roll));
+  }
+  else{
+    highest = abs(round(pitch));
+  }
+
+  Serial.print("highest");
+  Serial.print(highest);
+  Serial.println();
+
+
   // move all sand particles
   for(int i = 0; i < sandAmount; i++){
 
     // remove prior sand particle
-    tft.drawPixel(sandX[i], sandY[i], GC9A01A_BLACK);
+    // tft.drawPixel(sandX[i], sandY[i], GC9A01A_BLACK);
     sandGrid[sandX[i]][sandY[i]] = 0;
 
+    int newX = sandX[i];
+    int newY = sandY[i];
+
     // get new sand particle position
-    int newX = sandX[i] + round(roll * 1); // 0.1
-    int newY = sandY[i] - round(pitch * 1); // 0.1
+    for(int j = 0; j < highest; j++){
 
-    // keep sand in screen
-    int centerX = 120;
-    int centerY = 120;
-    int maxRadius = 120;
+      Serial.print(j);
 
-    float dx = newX - centerX;
-    float dy = newY - centerY;
-    float dist = sqrt(dx*dx + dy*dy);
+      // needs to account for negative and positive
+      if(j < abs(round(roll))){
+        if(roll > 0){
+          newX += 1;
+        }
+        else{
+          newX -= 1;
+        }
+        
+      }
 
-    if (dist > maxRadius) {
-        float scale = maxRadius / dist;
-        newX = centerX + dx * scale;
-        newY = centerY + dy * scale;
+      if(j < abs(round(pitch))){
+        if(pitch > 0){
+          newY -= 1;
+        }
+        else{
+          newY += 1;
+        }
+        
+      }
+
+      // keep sand in screen
+      int centerX = 120;
+      int centerY = 120;
+      int maxRadius = 120;
+
+      float dx = newX - centerX;
+      float dy = newY - centerY;
+      float dist = sqrt(dx*dx + dy*dy);
+
+      if (dist > maxRadius) {
+          float scale = maxRadius / dist;
+          newX = centerX + dx * scale;
+          newY = centerY + dy * scale;
+      }
+
+      // check if sand is colliding
+      if(sandGrid[newX][newY] == 0){
+        tft.drawPixel(sandX[i], sandY[i], GC9A01A_BLACK);
+        sandX[i] = newX;
+        sandY[i] = newY;
+        tft.drawPixel(sandX[i], sandY[i], GC9A01A_RED);
+      }
+      else{
+        break;
+      }
+      
     }
 
-    // check if sand is colliding
-    bool collide = false;
-    if(sandGrid[newX][newY] == 0){
-      sandX[i] = newX;
-      sandY[i] = newY;
-    }
 
     // draw sand particle in new position
     sandGrid[sandX[i]][sandY[i]] = 1;
-    tft.drawPixel(sandX[i], sandY[i], GC9A01A_RED);
+    // tft.drawPixel(sandX[i], sandY[i], GC9A01A_RED);
 
     
   }
+
 
   // delay(10);
 }
